@@ -1,0 +1,3 @@
+*.o
+isa-ldapserver
+.vscode/
