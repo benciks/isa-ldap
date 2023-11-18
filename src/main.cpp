@@ -12,7 +12,7 @@
 #include <iostream>
 #include <string>
 
-#include "message.h"
+#include "../include/message.h"
 
 #define PORT 389
 #define BUFFER_SIZE 32768 // 32KB
@@ -111,10 +111,8 @@ int main(int argc, char *argv[]) {
     }
 
     if ((pid = fork()) > 0) {
-      p = getpid();
       close(clientSockfd);
     } else if (pid == 0) {
-      p = getpid();
       close(sockfd);
 
       // Get client info
@@ -128,12 +126,13 @@ int main(int argc, char *argv[]) {
 
       std::cout << "Connection from " << host << ":" << service << std::endl;
 
-      // We have a client, make new LDAPServer instance and listen to requests
+      // Parse requests
       while (1) {
-        // Read request
+        // Read
         std::vector<unsigned char> buffer(BUFFER_SIZE);
         int bytesReceived = recv(clientSockfd, buffer.data(), BUFFER_SIZE, 0);
 
+        // Check for errors
         if (bytesReceived == -1) {
           std::cerr << "Error: Failed to read request" << std::endl;
           close(clientSockfd);
@@ -143,11 +142,10 @@ int main(int argc, char *argv[]) {
           break;
         }
 
-        std::cout << "Packet received" << std::endl;
-
         // Resize buffer to actual size
         buffer.resize(bytesReceived);
 
+        // Using polymorphism to determine the type of request
         auto ldapRequest = createLDAPRequest(buffer);
         ldapRequest->parse();
         ldapRequest->respond(clientSockfd, inputFile);

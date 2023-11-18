@@ -1,4 +1,4 @@
-#include "ber.h"
+#include "../include/ber.h"
 #include <iostream>
 #include <vector>
 
@@ -158,30 +158,76 @@ bool BERParser::getFilter(Filter &filter) {
     return false;
   }
 
+  if (!getLength(length)) {
+    return false;
+  }
+
+  filter.type = static_cast<FilterType>(tag);
+
   // Get the filter type
-  switch (tag) {
+  switch (filter.type) {
   case FilterType::EqualityMatch:
-    filter.type = FilterType::EqualityMatch;
+    if (!getOctetString(filter.equalityMatch.type)) {
+      return false;
+    }
+
+    if (!getOctetString(filter.equalityMatch.value)) {
+      return false;
+    }
+
+    break;
+  case FilterType::SubstringMatch:
+    if (!getOctetString(filter.substringMatch.type)) {
+      return false;
+    }
+
+    // Parse the substrings
+    while (!isEnd()) {
+      unsigned char tag;
+      unsigned char length;
+
+      if (!getTag(tag)) {
+        return false;
+      }
+
+      if (tag == 0x80) {
+        // Initial
+        if (!getOctetString(filter.substringMatch.initial)) {
+          return false;
+        }
+      } else if (tag == 0x81) {
+        // Any
+        if (!getOctetString(filter.substringMatch.any)) {
+          return false;
+        }
+      } else if (tag == 0x82) {
+        // Final
+        if (!getOctetString(filter.substringMatch.final)) {
+          return false;
+        }
+      } else {
+        std::cerr << "Expected tag 0x80, 0x81, or 0x82, got " << std::hex
+                  << (int)tag << std::endl;
+        return false;
+      }
+    }
+    break;
+  case FilterType::AND:
+  case FilterType::OR:
+  case FilterType::NOT:
+    // parse nested filters
+    while (!isEnd()) {
+      Filter nestedFilter;
+
+      if (!getFilter(nestedFilter)) {
+        return false;
+      }
+
+      filter.filters.push_back(nestedFilter);
+    }
     break;
 
   default:
     break;
   }
-
-  // Get the filter attributes
-  if (!getLength(length)) {
-    return false;
-  }
-
-  std::cout << "Filter length: " << std::hex << (int)length << std::endl;
-  std::cout << "Pos: " << std::hex << (int)pos << std::endl;
-  Attribute attribute;
-
-  // Assume only one attribute for now
-  // TODO: Handle multiple attributes
-  getOctetString(attribute.type);
-  getOctetString(attribute.value);
-  filter.attributes.push_back(attribute);
-
-  return true;
 }

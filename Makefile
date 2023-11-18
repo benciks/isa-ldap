@@ -4,8 +4,14 @@ CXX = g++
 # Compiler flags
 CXXFLAGS = -std=c++17 -Wall
 
+# Include
+INCDIR = -I./include
+
+# SRC
+SRCDIR = ./src
+
 # Source files
-SRCS = main.cpp message.cpp ber.cpp file.cpp
+SRCS = $(SRCDIR)/main.cpp $(SRCDIR)/message.cpp $(SRCDIR)/ber.cpp $(SRCDIR)/search.cpp
 
 # Object files
 OBJS = $(SRCS:.cpp=.o)
@@ -17,13 +23,13 @@ TARGET = isa-ldapserver
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $(TARGET) $(OBJS)
 
 %.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
 clean:
 	rm -f $(OBJS) $(TARGET)
 
 run:
-	./$(TARGET) -f ./lidi.csv
+	./$(TARGET) -f ./resources/lidi.csv

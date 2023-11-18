@@ -1,5 +1,5 @@
-#ifndef FILE_H
-#define FILE_H
+#ifndef SEARCH_H
+#define SEARCH_H
 
 #include <string>
 #include <vector>

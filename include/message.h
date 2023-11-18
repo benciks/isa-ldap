@@ -1,7 +1,8 @@
 #ifndef REQUEST_H
 #define REQUEST_H
 
-#include "ber.h"
+#include "../include/ber.h"
+#include "../include/search.h"
 #include <iostream>
 #include <string>
 
@@ -30,6 +31,8 @@ protected:
   void init();
 };
 
+// TODO: If we receive openssl authentication, we need to respond with a
+// protcolError
 class Bind : public LDAPMessage {
 public:
   Bind(std::vector<unsigned char> &buffer) : LDAPMessage(buffer) {}
@@ -53,6 +56,12 @@ private:
   unsigned char timeLimit;
   unsigned char typesOnly;
   Filter filter;
+
+  void addAttribute(std::vector<unsigned char> &response,
+                    const std::string &type, const std::string &value);
+  void sendSearchResEntry(const FileEntry &entry, int fd,
+                          unsigned char messageID);
+  void sendSearchResDone(int fd, unsigned char messageID);
 };
 
 class Unbind : public LDAPMessage {

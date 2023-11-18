@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "file.h"
+#include "../include/search.h"
 
 std::vector<FileEntry> readCSV(const std::string &filename) {
   std::vector<FileEntry> entries;
