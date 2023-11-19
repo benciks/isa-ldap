@@ -150,7 +150,38 @@ bool BERParser::getSequence(std::vector<unsigned char> &sequence) {
 
 bool BERParser::isEnd() { return pos == buffer.size(); }
 
+bool BERParser::getSubstringFilter(SubsType &subs) {
+  unsigned char tag;
+  if (!getTag(tag)) {
+    return false;
+  }
+
+  unsigned char length;
+  if (!getLength(length)) {
+    return false;
+  }
+
+  if (tag == 0x80) {
+    subs.initial = std::vector<unsigned char>(buffer.begin() + pos,
+                                              buffer.begin() + pos + length);
+  } else if (tag == 0x81) {
+    subs.any = std::vector<unsigned char>(buffer.begin() + pos,
+                                          buffer.begin() + pos + length);
+  } else if (tag == 0x82) {
+    subs.final = std::vector<unsigned char>(buffer.begin() + pos,
+                                            buffer.begin() + pos + length);
+  } else {
+    std::cerr << "Expected tag 0x80, 0x81, or 0x82, got " << std::hex
+              << (int)tag << std::endl;
+    return false;
+  }
+
+  pos += length;
+  return true;
+}
+
 bool BERParser::getFilter(Filter &filter) {
+  // If following tag is a sequence, we catched attribute list
   unsigned char tag;
   unsigned char length;
 
@@ -164,8 +195,13 @@ bool BERParser::getFilter(Filter &filter) {
 
   filter.type = static_cast<FilterType>(tag);
 
+  std::vector<unsigned char> seq;
+  size_t endOfFilter = pos + length;
+
   // Get the filter type
   switch (filter.type) {
+  case FilterType::ALL:
+    break;
   case FilterType::EqualityMatch:
     if (!getOctetString(filter.equalityMatch.type)) {
       return false;
@@ -181,46 +217,26 @@ bool BERParser::getFilter(Filter &filter) {
       return false;
     }
 
-    // Parse the substrings
-    while (!isEnd()) {
-      unsigned char tag;
-      unsigned char length;
-
-      if (!getTag(tag)) {
-        return false;
-      }
-
-      if (tag == 0x80) {
-        // Initial
-        if (!getOctetString(filter.substringMatch.initial)) {
-          return false;
-        }
-      } else if (tag == 0x81) {
-        // Any
-        if (!getOctetString(filter.substringMatch.any)) {
-          return false;
-        }
-      } else if (tag == 0x82) {
-        // Final
-        if (!getOctetString(filter.substringMatch.final)) {
-          return false;
-        }
-      } else {
-        std::cerr << "Expected tag 0x80, 0x81, or 0x82, got " << std::hex
-                  << (int)tag << std::endl;
-        return false;
-      }
+    // Parse sequence
+    if (!getSequence(seq)) {
+      return false;
     }
+
+    // parse substring filters
+    if (!getSubstringFilter(filter.substringMatch)) {
+      return false;
+    }
+
     break;
   case FilterType::AND:
   case FilterType::OR:
   case FilterType::NOT:
-    // parse nested filters
-    while (!isEnd()) {
+    while (pos < endOfFilter) {
       Filter nestedFilter;
 
       if (!getFilter(nestedFilter)) {
         return false;
+        break;
       }
 
       filter.filters.push_back(nestedFilter);
@@ -230,4 +246,6 @@ bool BERParser::getFilter(Filter &filter) {
   default:
     break;
   }
+
+  return true;
 }

@@ -78,7 +78,8 @@ void Search::parse() {
 }
 
 void Search::addAttribute(std::vector<unsigned char> &message,
-                          const std::string &type, const std::string &value) {
+                          const std::vector<unsigned char> &type,
+                          const std::vector<unsigned char> &value) {
   // Start the attribute SEQUENCE
   message.push_back(0x30);
   int attributeStartPos = message.size();
@@ -87,7 +88,7 @@ void Search::addAttribute(std::vector<unsigned char> &message,
   // Attribute type
   message.push_back(0x04);
   message.push_back(static_cast<unsigned char>(type.size())); // length
-  for (char c : type) {
+  for (unsigned char c : type) {
     message.push_back(c);
   }
 
@@ -98,8 +99,10 @@ void Search::addAttribute(std::vector<unsigned char> &message,
 
   // Attribute value
   message.push_back(0x04);
+
+  // print the value size
   message.push_back(static_cast<unsigned char>(value.size())); // length
-  for (char c : value) {
+  for (unsigned char c : value) {
     message.push_back(c);
   }
 
@@ -131,11 +134,12 @@ void Search::sendSearchResEntry(const FileEntry &entry, int fd,
   message.push_back(0x00); // Placeholder for length
 
   // ObjectName (DN)
-  std::string dn = "uid=" + entry.uid + ",dc=example,dc=com";
+  std::string uidString(entry.uid.begin(), entry.uid.end());
+  std::string dn = "uid=" + uidString;
 
   // Append the DN
-  message.push_back(0x04);                                  // Octet String tag
-  message.push_back(static_cast<unsigned char>(dn.size())); // length
+  message.push_back(0x04);
+  message.push_back(static_cast<unsigned char>(dn.size()));
   for (char c : dn) {
     message.push_back(c);
   }
@@ -145,9 +149,9 @@ void Search::sendSearchResEntry(const FileEntry &entry, int fd,
   int attributesSeqStartPos = message.size();
   message.push_back(0x00);
 
-  // Add attributes
-  addAttribute(message, "cn", entry.cn);
-  addAttribute(message, "mail", entry.mail);
+  // Add the attributes
+  addAttribute(message, {'c', 'n'}, entry.cn);
+  addAttribute(message, {'m', 'a', 'i', 'l'}, entry.mail);
 
   // update sequence len
   message[attributesSeqStartPos] =
@@ -197,29 +201,16 @@ void Search::sendSearchResDone(int fd, unsigned char messageId) {
 }
 
 void Search::respond(int fd, std::string inputFile) {
-  unsigned char filterTag;
-  unsigned char filterLength;
-
   std::cout << "Search response ->" << std::endl;
 
-  // EqualityMatch filter
-  if (filter.type == FilterType::EqualityMatch) {
-    std::string filterType(filter.equalityMatch.type.begin(),
-                           filter.equalityMatch.type.end());
-    if (filterType == "cn") {
-      auto entries = readCSV(inputFile);
-      std::string cnValue = std::string(filter.equalityMatch.value.begin(),
-                                        filter.equalityMatch.value.end());
+  auto entries = readCSV(inputFile);
+  auto filtered = filterEntries(filter, entries);
 
-      auto result = searchByCN(entries, cnValue);
-
-      for (const auto &entry : result) {
-        sendSearchResEntry(entry, fd, messageID);
-      }
-
-      sendSearchResDone(fd, messageID);
-    }
+  for (const auto &entry : filtered) {
+    sendSearchResEntry(entry, fd, messageID);
   }
+
+  sendSearchResDone(fd, messageID);
 }
 
 void Unbind::parse() { std::cout << "Unbind request <-" << std::endl; }
