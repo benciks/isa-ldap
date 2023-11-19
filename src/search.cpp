@@ -23,16 +23,13 @@ std::vector<FileEntry> readCSV(const std::string &filename) {
     uid.erase(std::remove(uid.begin(), uid.end(), '\r'), uid.end());
     mail.erase(std::remove(mail.begin(), mail.end(), '\r'), mail.end());
 
-    entries.push_back({std::vector<unsigned char>(cn.begin(), cn.end()),
-                       std::vector<unsigned char>(uid.begin(), uid.end()),
-                       std::vector<unsigned char>(mail.begin(), mail.end())});
+    entries.push_back({cn, uid, mail});
   }
 
   return entries;
 }
 
 bool filterEntry(const Filter &filter, const FileEntry &entry) {
-
   switch (filter.type) {
   case FilterType::ALL:
     return true;
@@ -57,11 +54,11 @@ bool filterEntry(const Filter &filter, const FileEntry &entry) {
 }
 
 bool applyEqualityMatch(const EqType &eqMatch, const FileEntry &entry) {
-  if (eqMatch.type == std::vector<unsigned char>({'c', 'n'})) {
+  if (eqMatch.type == "cn") {
     return entry.cn == eqMatch.value;
-  } else if (eqMatch.type == std::vector<unsigned char>({'u', 'i', 'd'})) {
+  } else if (eqMatch.type == "uid") {
     return entry.uid == eqMatch.value;
-  } else if (eqMatch.type == std::vector<unsigned char>({'m', 'a', 'i', 'l'})) {
+  } else if (eqMatch.type == "mail") {
     return entry.mail == eqMatch.value;
   }
 
@@ -69,44 +66,39 @@ bool applyEqualityMatch(const EqType &eqMatch, const FileEntry &entry) {
 }
 
 bool applySubstringMatch(const SubsType &subsMatch, const FileEntry &entry) {
-  std::vector<FileEntry> result;
-
-  std::string initial(subsMatch.initial.begin(), subsMatch.initial.end());
-  std::string any(subsMatch.any.begin(), subsMatch.any.end());
-  std::string final(subsMatch.final.begin(), subsMatch.final.end());
-
-  std::string cn(entry.cn.begin(), entry.cn.end());
-  std::string uid(entry.uid.begin(), entry.uid.end());
-  std::string mail(entry.mail.begin(), entry.mail.end());
-
   std::string entryValue;
   // Determine what attribute we are matching on
-  if (subsMatch.type == std::vector<unsigned char>({'c', 'n'})) {
-    entryValue = cn;
-  } else if (subsMatch.type == std::vector<unsigned char>({'u', 'i', 'd'})) {
-    entryValue = uid;
-  } else if (subsMatch.type ==
-             std::vector<unsigned char>({'m', 'a', 'i', 'l'})) {
-    entryValue = mail;
+  if (subsMatch.type == "cn") {
+    entryValue = entry.cn;
+  } else if (subsMatch.type == "uid") {
+    entryValue = entry.uid;
+  } else if (subsMatch.type == "mail") {
+    entryValue = entry.mail;
   }
 
-  if (!initial.empty()) {
-    if (entryValue.find(initial) != 0) {
+  if (!subsMatch.initial.empty()) {
+    if (entryValue.find(subsMatch.initial) != 0) {
       return false;
     }
   }
 
-  if (!any.empty()) {
-    std::cout << "any: " << any << std::endl;
-    if (entryValue.find(any) == std::string::npos) {
+  // Check any parts in sequence
+  size_t startPos =
+      subsMatch.initial.empty()
+          ? 0
+          : entryValue.find(subsMatch.initial) + subsMatch.initial.size();
+  for (const auto &part : subsMatch.any) {
+    size_t anyPos = entryValue.find(part, startPos);
+    if (anyPos == std::string::npos) {
       return false;
     }
+    startPos = anyPos + part.size();
   }
 
-  if (!final.empty()) {
-    size_t finalPos = entryValue.rfind(final);
+  if (!subsMatch.final.empty()) {
+    size_t finalPos = entryValue.rfind(subsMatch.final);
     if (finalPos == std::string::npos ||
-        finalPos != entryValue.length() - final.length()) {
+        finalPos != entryValue.length() - subsMatch.final.length()) {
       return false;
     }
   }

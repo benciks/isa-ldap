@@ -78,8 +78,7 @@ void Search::parse() {
 }
 
 void Search::addAttribute(std::vector<unsigned char> &message,
-                          const std::vector<unsigned char> &type,
-                          const std::vector<unsigned char> &value) {
+                          const std::string &type, const std::string &value) {
   // Start the attribute SEQUENCE
   message.push_back(0x30);
   int attributeStartPos = message.size();
@@ -150,8 +149,8 @@ void Search::sendSearchResEntry(const FileEntry &entry, int fd,
   message.push_back(0x00);
 
   // Add the attributes
-  addAttribute(message, {'c', 'n'}, entry.cn);
-  addAttribute(message, {'m', 'a', 'i', 'l'}, entry.mail);
+  addAttribute(message, "cn", entry.cn);
+  addAttribute(message, "mail", entry.mail);
 
   // update sequence len
   message[attributesSeqStartPos] =

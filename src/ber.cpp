@@ -151,32 +151,50 @@ bool BERParser::getSequence(std::vector<unsigned char> &sequence) {
 bool BERParser::isEnd() { return pos == buffer.size(); }
 
 bool BERParser::getSubstringFilter(SubsType &subs) {
-  unsigned char tag;
-  if (!getTag(tag)) {
-    return false;
+  bool hasInitial = false;
+  bool hasFinal = false;
+
+  while (true) {
+    unsigned char tag;
+    if (!getTag(tag)) {
+      return false;
+    }
+
+    if (tag != 0x80 && tag != 0x81 && tag != 0x82) {
+      pos -= 1;
+      break;
+    }
+
+    unsigned char length;
+    if (!getLength(length)) {
+      return false;
+    }
+
+    if (tag == 0x80) {
+      if (hasInitial) {
+        std::cerr << "Expected only one initial substring filter" << std::endl;
+        return false;
+      }
+
+      subs.initial =
+          std::string(buffer.begin() + pos, buffer.begin() + pos + length);
+      hasInitial = true;
+    } else if (tag == 0x81) {
+      subs.any.push_back(
+          std::string(buffer.begin() + pos, buffer.begin() + pos + length));
+    } else if (tag == 0x82) {
+      if (hasFinal) {
+        std::cerr << "Expected only one final substring filter" << std::endl;
+        return false;
+      }
+      subs.final =
+          std::string(buffer.begin() + pos, buffer.begin() + pos + length);
+      hasFinal = true;
+    }
+
+    pos += length;
   }
 
-  unsigned char length;
-  if (!getLength(length)) {
-    return false;
-  }
-
-  if (tag == 0x80) {
-    subs.initial = std::vector<unsigned char>(buffer.begin() + pos,
-                                              buffer.begin() + pos + length);
-  } else if (tag == 0x81) {
-    subs.any = std::vector<unsigned char>(buffer.begin() + pos,
-                                          buffer.begin() + pos + length);
-  } else if (tag == 0x82) {
-    subs.final = std::vector<unsigned char>(buffer.begin() + pos,
-                                            buffer.begin() + pos + length);
-  } else {
-    std::cerr << "Expected tag 0x80, 0x81, or 0x82, got " << std::hex
-              << (int)tag << std::endl;
-    return false;
-  }
-
-  pos += length;
   return true;
 }
 
@@ -198,24 +216,34 @@ bool BERParser::getFilter(Filter &filter) {
   std::vector<unsigned char> seq;
   size_t endOfFilter = pos + length;
 
+  std::vector<unsigned char> tmp;
+
   // Get the filter type
   switch (filter.type) {
   case FilterType::ALL:
     break;
   case FilterType::EqualityMatch:
-    if (!getOctetString(filter.equalityMatch.type)) {
+    if (!getOctetString(tmp)) {
       return false;
     }
 
-    if (!getOctetString(filter.equalityMatch.value)) {
+    filter.equalityMatch.type =
+        std::string(tmp.begin(), tmp.end()); // Convert to string
+
+    if (!getOctetString(tmp)) {
       return false;
     }
+
+    filter.equalityMatch.value =
+        std::string(tmp.begin(), tmp.end()); // Convert to string
 
     break;
   case FilterType::SubstringMatch:
-    if (!getOctetString(filter.substringMatch.type)) {
+    if (!getOctetString(tmp)) {
       return false;
     }
+    filter.substringMatch.type =
+        std::string(tmp.begin(), tmp.end()); // Convert to string
 
     // Parse sequence
     if (!getSequence(seq)) {

@@ -58,8 +58,7 @@ private:
   Filter filter;
 
   void addAttribute(std::vector<unsigned char> &response,
-                    const std::vector<unsigned char> &type,
-                    const std::vector<unsigned char> &value);
+                    const std::string &type, const std::string &value);
   void sendSearchResEntry(const FileEntry &entry, int fd,
                           unsigned char messageID);
   void sendSearchResDone(int fd, unsigned char messageID);

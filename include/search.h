@@ -5,36 +5,21 @@
 #include <vector>
 
 struct FileEntry {
-  std::vector<unsigned char> cn;
-  std::vector<unsigned char> uid;
-  std::vector<unsigned char> mail;
-
-  // Custom comparator for sorting
-  bool operator<(const FileEntry &other) const {
-    if (cn != other.cn) {
-      return cn < other.cn;
-    }
-    if (uid != other.uid) {
-      return uid < other.uid;
-    }
-    return mail < other.mail;
-  }
-
-  bool operator==(const FileEntry &other) const {
-    return cn == other.cn && uid == other.uid && mail == other.mail;
-  }
+  std::string cn;
+  std::string uid;
+  std::string mail;
 };
 
 struct EqType {
-  std::vector<unsigned char> type;
-  std::vector<unsigned char> value;
+  std::string type;
+  std::string value;
 };
 
 struct SubsType {
-  std::vector<unsigned char> type;
-  std::vector<unsigned char> initial;
-  std::vector<unsigned char> any;
-  std::vector<unsigned char> final;
+  std::string type;
+  std::string initial;
+  std::vector<std::string> any;
+  std::string final;
 };
 
 enum FilterType {
