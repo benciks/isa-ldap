@@ -31,192 +31,113 @@ std::vector<FileEntry> readCSV(const std::string &filename) {
   return entries;
 }
 
-std::vector<FileEntry> filterEntries(const Filter &filter,
-                                     const std::vector<FileEntry> &entries) {
+bool filterEntry(const Filter &filter, const FileEntry &entry) {
 
   switch (filter.type) {
   case FilterType::ALL:
-    return entries;
+    return true;
   case FilterType::EqualityMatch:
-    return applyEqualityMatch(filter.equalityMatch, entries);
+    return applyEqualityMatch(filter.equalityMatch, entry);
   case FilterType::SubstringMatch:
-    return applySubstringMatch(filter.substringMatch, entries);
+    return applySubstringMatch(filter.substringMatch, entry);
   case FilterType::AND:
-    return applyAND(filter.filters, entries);
+    return applyAND(filter.filters, entry);
   case FilterType::OR:
-    return applyOR(filter.filters, entries);
+    return applyOR(filter.filters, entry);
   case FilterType::NOT:
     if (filter.filters.size() != 1) {
       std::cerr << "Expected 1 filter for NOT, got " << filter.filters.size()
                 << std::endl;
       return {};
     }
-    return applyNOT(filter.filters[0], entries);
+    return applyNOT(filter.filters[0], entry);
   default:
-    break;
+    return false;
   }
-
-  // Return empty vector if we don't recognize the filter type
-  return std::vector<FileEntry>();
 }
 
-std::vector<FileEntry>
-applyEqualityMatch(const EqType &eqMatch,
-                   const std::vector<FileEntry> &entries) {
-  std::vector<FileEntry> result;
-
+bool applyEqualityMatch(const EqType &eqMatch, const FileEntry &entry) {
   if (eqMatch.type == std::vector<unsigned char>({'c', 'n'})) {
-    for (const auto &entry : entries) {
-      if (entry.cn == eqMatch.value) {
-        result.push_back(entry);
-      }
-    }
+    return entry.cn == eqMatch.value;
   } else if (eqMatch.type == std::vector<unsigned char>({'u', 'i', 'd'})) {
-    for (const auto &entry : entries) {
-      if (entry.uid == eqMatch.value) {
-        result.push_back(entry);
-      }
-    }
+    return entry.uid == eqMatch.value;
   } else if (eqMatch.type == std::vector<unsigned char>({'m', 'a', 'i', 'l'})) {
-    for (const auto &entry : entries) {
-      if (entry.mail == eqMatch.value) {
-        result.push_back(entry);
-      }
-    }
+    return entry.mail == eqMatch.value;
   }
 
-  std::cout << "EqualityMatch" << std::endl;
-  return result;
+  return false;
 }
 
-std::vector<FileEntry>
-applySubstringMatch(const SubsType &subsMatch,
-                    const std::vector<FileEntry> &entries) {
+bool applySubstringMatch(const SubsType &subsMatch, const FileEntry &entry) {
   std::vector<FileEntry> result;
 
   std::string initial(subsMatch.initial.begin(), subsMatch.initial.end());
   std::string any(subsMatch.any.begin(), subsMatch.any.end());
   std::string final(subsMatch.final.begin(), subsMatch.final.end());
 
-  for (const auto &entry : entries) {
-    std::string cn(entry.cn.begin(), entry.cn.end());
-    std::string uid(entry.uid.begin(), entry.uid.end());
-    std::string mail(entry.mail.begin(), entry.mail.end());
+  std::string cn(entry.cn.begin(), entry.cn.end());
+  std::string uid(entry.uid.begin(), entry.uid.end());
+  std::string mail(entry.mail.begin(), entry.mail.end());
 
-    std::string entryValue;
-    // Determine what attribute we are matching on
-    if (subsMatch.type == std::vector<unsigned char>({'c', 'n'})) {
-      entryValue = cn;
-    } else if (subsMatch.type == std::vector<unsigned char>({'u', 'i', 'd'})) {
-      entryValue = uid;
-    } else if (subsMatch.type ==
-               std::vector<unsigned char>({'m', 'a', 'i', 'l'})) {
-      entryValue = mail;
-    }
+  std::string entryValue;
+  // Determine what attribute we are matching on
+  if (subsMatch.type == std::vector<unsigned char>({'c', 'n'})) {
+    entryValue = cn;
+  } else if (subsMatch.type == std::vector<unsigned char>({'u', 'i', 'd'})) {
+    entryValue = uid;
+  } else if (subsMatch.type ==
+             std::vector<unsigned char>({'m', 'a', 'i', 'l'})) {
+    entryValue = mail;
+  }
 
-    bool match = true;
-
-    if (!initial.empty()) {
-      if (entryValue.find(initial) != 0) {
-        match = false;
-      }
-    }
-
-    if (!any.empty()) {
-      if (entryValue.find(any) == std::string::npos) {
-        match = false;
-      }
-    }
-
-    if (!final.empty()) {
-      if (entryValue.find(final) != entryValue.length() - final.length()) {
-        match = false;
-      }
-    }
-
-    if (match) {
-      result.push_back(entry);
+  if (!initial.empty()) {
+    if (entryValue.find(initial) != 0) {
+      return false;
     }
   }
 
-  std::cout << "SubstringMatch" << std::endl;
-  return result;
+  if (!any.empty()) {
+    std::cout << "any: " << any << std::endl;
+    if (entryValue.find(any) == std::string::npos) {
+      return false;
+    }
+  }
+
+  if (!final.empty()) {
+    size_t finalPos = entryValue.rfind(final);
+    if (finalPos == std::string::npos ||
+        finalPos != entryValue.length() - final.length()) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
-std::vector<FileEntry> applyAND(const std::vector<Filter> &filters,
-                                const std::vector<FileEntry> &entries) {
-  std::vector<FileEntry> result;
+bool applyAND(const std::vector<Filter> &filters, const FileEntry &entry) {
   for (const auto &filter : filters) {
-    auto filteredEntries = filterEntries(filter, entries);
-
-    // Print result
-    for (const auto &entry : filteredEntries) {
-      std::cout << "and cn: " << std::string(entry.cn.begin(), entry.cn.end())
-                << std::endl;
-    }
-    std::cout << std::endl;
-
-    if (result.empty()) {
-      result = filteredEntries;
-    } else {
-      std::sort(result.begin(), result.end());
-      std::sort(filteredEntries.begin(), filteredEntries.end());
-
-      std::vector<FileEntry> temp;
-      std::set_intersection(result.begin(), result.end(),
-                            filteredEntries.begin(), filteredEntries.end(),
-                            std::back_inserter(temp));
-      result = temp;
+    if (!filterEntry(filter, entry)) {
+      return false;
     }
   }
-  std::cout << "AND" << std::endl;
-  return result;
+
+  return true;
 }
 
-std::vector<FileEntry> applyOR(const std::vector<Filter> &filters,
-                               const std::vector<FileEntry> &entries) {
-  std::vector<FileEntry> result;
-
+bool applyOR(const std::vector<Filter> &filters, const FileEntry &entry) {
   for (const auto &filter : filters) {
-    // Print filter type
-    auto filteredEntries = filterEntries(filter, entries);
-
-    // Print result
-    for (const auto &entry : filteredEntries) {
-      std::cout << "or cn: " << std::string(entry.cn.begin(), entry.cn.end())
-                << std::endl;
+    if (filterEntry(filter, entry)) {
+      return true;
     }
-    std::cout << std::endl;
-
-    std::sort(filteredEntries.begin(), filteredEntries.end());
-
-    std::vector<FileEntry> temp;
-    std::set_union(result.begin(), result.end(), filteredEntries.begin(),
-                   filteredEntries.end(), std::back_inserter(temp));
-
-    result = temp;
   }
 
-  // Remove duplicates
-  std::sort(result.begin(), result.end());
-  result.erase(std::unique(result.begin(), result.end()), result.end());
-
-  std::cout << "OR" << std::endl;
-  return result;
+  return false;
 }
 
-std::vector<FileEntry> applyNOT(const Filter &filter,
-                                const std::vector<FileEntry> &entries) {
-  std::vector<FileEntry> result;
-  auto filteredEntries = filterEntries(filter, entries);
-
-  for (const auto &entry : entries) {
-    if (std::find(filteredEntries.begin(), filteredEntries.end(), entry) ==
-        filteredEntries.end()) {
-      result.push_back(entry);
-    }
+bool applyNOT(const Filter &filter, const FileEntry &entry) {
+  if (filterEntry(filter, entry)) {
+    return false;
   }
 
-  std::cout << "NOT" << std::endl;
-  return result;
+  return true;
 }

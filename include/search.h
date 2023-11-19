@@ -55,24 +55,16 @@ struct Filter {
 
 std::vector<FileEntry> readCSV(const std::string &filename);
 
-std::vector<FileEntry> filterEntries(const Filter &filter,
-                                     const std::vector<FileEntry> &entries);
+bool filterEntry(const Filter &filter, const FileEntry &entry);
 
-std::vector<FileEntry>
-applyEqualityMatch(const EqType &eqMatch,
-                   const std::vector<FileEntry> &entries);
+bool applyEqualityMatch(const EqType &eqMatch, const FileEntry &entry);
 
-std::vector<FileEntry>
-applySubstringMatch(const SubsType &subsMatch,
-                    const std::vector<FileEntry> &entries);
+bool applySubstringMatch(const SubsType &subsMatch, const FileEntry &entry);
 
-std::vector<FileEntry> applyAND(const std::vector<Filter> &filters,
-                                const std::vector<FileEntry> &entries);
+bool applyAND(const std::vector<Filter> &filters, const FileEntry &entry);
 
-std::vector<FileEntry> applyOR(const std::vector<Filter> &filters,
-                               const std::vector<FileEntry> &entries);
+bool applyOR(const std::vector<Filter> &filters, const FileEntry &entry);
 
-std::vector<FileEntry> applyNOT(const Filter &filter,
-                                const std::vector<FileEntry> &entries);
+bool applyNOT(const Filter &filter, const FileEntry &entry);
 
 #endif

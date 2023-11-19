@@ -204,10 +204,11 @@ void Search::respond(int fd, std::string inputFile) {
   std::cout << "Search response ->" << std::endl;
 
   auto entries = readCSV(inputFile);
-  auto filtered = filterEntries(filter, entries);
-
-  for (const auto &entry : filtered) {
-    sendSearchResEntry(entry, fd, messageID);
+  // Apply filter to each entry
+  for (const auto &entry : entries) {
+    if (filterEntry(filter, entry)) {
+      sendSearchResEntry(entry, fd, messageID);
+    }
   }
 
   sendSearchResDone(fd, messageID);
