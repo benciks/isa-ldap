@@ -148,7 +148,7 @@ private:
    * @brief Send the search result done
    * @param fd The file descriptor to write to
    */
-  void sendSearchResDone(int fd);
+  void sendSearchResDone(int fd, bool sizeLimitReached);
 };
 
 /**

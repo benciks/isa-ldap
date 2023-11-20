@@ -168,7 +168,7 @@ void Search::sendSearchResEntry(const FileEntry &entry, int fd) {
   send(fd, message.data(), message.size(), 0);
 }
 
-void Search::sendSearchResDone(int fd) {
+void Search::sendSearchResDone(int fd, bool sizeLimitReached) {
   // Add the search result done message
   std::vector<unsigned char> done;
 
@@ -188,7 +188,7 @@ void Search::sendSearchResDone(int fd) {
   // resultCode
   done.push_back(0x0a);
   done.push_back(0x01);
-  done.push_back(0x00);
+  sizeLimitReached ? done.push_back(0x04) : done.push_back(0x00);
 
   // matchedDN
   done.push_back(0x04);
@@ -204,20 +204,29 @@ void Search::respond(int fd, std::string inputFile) {
   std::cout << "Search response ->" << std::endl;
 
   auto entries = readCSV(inputFile);
+  bool sizeLimitReached = false;
   size_t count = 0;
 
+  std::vector<FileEntry> filteredEntries;
   // Apply filter to each entry
   for (const auto &entry : entries) {
-    if (sizeLimit != 0 && count >= sizeLimit) {
-      break;
-    }
     if (filterEntry(filter, entry)) {
-      sendSearchResEntry(entry, fd);
+      filteredEntries.push_back(entry);
       count++;
     }
   }
 
-  sendSearchResDone(fd);
+  // Check for size constraint and truncate if necessary
+  if (sizeLimit != 0 && count > sizeLimit) {
+    sizeLimitReached = true;
+    filteredEntries.resize(sizeLimit);
+  }
+
+  for (const auto &entry : filteredEntries) {
+    sendSearchResEntry(entry, fd);
+  }
+
+  sendSearchResDone(fd, sizeLimitReached);
 }
 
 void Unbind::parse() { std::cout << "Unbind request <-" << std::endl; }
