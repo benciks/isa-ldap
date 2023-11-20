@@ -1,3 +1,9 @@
+/**
+ * @file message.cpp
+ * @brief This file contains implementation of the LDAPMessage class and its
+ * subclasses
+ * @author Simon Bencik <xbenci01>
+ */
 #include <sys/socket.h>
 
 #include "../include/message.h"
@@ -20,11 +26,8 @@ void Bind::parse() {
   unsigned char version;
   parser.getInteger(version);
 
-  std::cout << "Version: " << (int)version << std::endl;
-
   std::vector<unsigned char> name;
   parser.getOctetString(name);
-  std::cout << "Name: " << std::string(name.begin(), name.end()) << std::endl;
 }
 
 void Bind::respond(int fd, std::string inputFile) {
@@ -40,7 +43,6 @@ void Bind::respond(int fd, std::string inputFile) {
   // Add the message ID
   response.push_back(0x02);
   response.push_back(0x01);
-  std::cout << "Message ID: " << (int)messageID << std::endl;
   response.push_back(messageID);
 
   // Add the protocol op
@@ -114,8 +116,7 @@ void Search::addAttribute(std::vector<unsigned char> &message,
       static_cast<unsigned char>(message.size() - attributeStartPos - 1);
 }
 
-void Search::sendSearchResEntry(const FileEntry &entry, int fd,
-                                unsigned char messageId) {
+void Search::sendSearchResEntry(const FileEntry &entry, int fd) {
   std::vector<unsigned char> message;
 
   // LDAPMessage sequence
@@ -167,7 +168,7 @@ void Search::sendSearchResEntry(const FileEntry &entry, int fd,
   send(fd, message.data(), message.size(), 0);
 }
 
-void Search::sendSearchResDone(int fd, unsigned char messageId) {
+void Search::sendSearchResDone(int fd) {
   // Add the search result done message
   std::vector<unsigned char> done;
 
@@ -211,19 +212,17 @@ void Search::respond(int fd, std::string inputFile) {
       break;
     }
     if (filterEntry(filter, entry)) {
-      sendSearchResEntry(entry, fd, messageID);
+      sendSearchResEntry(entry, fd);
       count++;
     }
   }
 
-  sendSearchResDone(fd, messageID);
+  sendSearchResDone(fd);
 }
 
 void Unbind::parse() { std::cout << "Unbind request <-" << std::endl; }
 
-void Unbind::respond(int fd, std::string inputFile) {
-  std::cout << "Unbind response ->" << std::endl;
-};
+void Unbind::respond(int fd, std::string inputFile){};
 
 // Determine the type of request and create the appropriate object
 std::unique_ptr<LDAPMessage>

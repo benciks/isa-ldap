@@ -30,6 +30,16 @@ $(TARGET): $(OBJS)
 
 clean:
 	rm -f $(OBJS) $(TARGET)
+	rm -rf doc/
 
 run:
 	./$(TARGET) -f ./resources/lidi.csv
+
+doxygen:
+	doxygen Doxyfile
+
+manual:
+	pandoc manual.md -o manual.pdf
+
+pack: clean
+	tar -cf xbenci01.tar src/ include/ resources/ Makefile README doxyfile manual.md manual.pdf

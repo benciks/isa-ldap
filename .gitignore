@@ -1,3 +1,4 @@
 *.o
 isa-ldapserver
 .vscode/
+doc/

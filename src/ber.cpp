@@ -1,3 +1,8 @@
+/**
+ * @file ber.cpp
+ * @brief This file contains the BERParser class implementation
+ * @author Simon Bencik <xbenci01>
+ */
 #include "../include/ber.h"
 #include <iostream>
 #include <vector>
@@ -5,7 +10,6 @@
 BERParser::BERParser(std::vector<unsigned char> &buffer)
     : buffer(buffer), pos(0) {
   if (buffer.size() < 2) {
-    std::cout << buffer.size() << std::endl;
     std::cerr << "Buffer too small" << std::endl;
     return;
   }
@@ -32,8 +36,6 @@ bool BERParser::getLength(unsigned char &length) {
       length = (length << 8) | buffer[pos++];
     }
 
-    // Print length
-    std::cout << "Long form Length: " << std::hex << (int)length << std::endl;
     return true;
   }
   length = tmpLength;

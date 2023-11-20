@@ -1,3 +1,8 @@
+/**
+ * @file main.cpp
+ * @brief LDAP server entry point and parallel tcp server implementation
+ * @author Simon Bencik <xbenci01>
+ */
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <signal.h>
@@ -19,7 +24,6 @@
 
 // Gracefully handle SIGINT and SIGTERM
 int sockfd;
-
 void signalHandler(int signum) {
   // Cleanup and close up stuff here
   close(sockfd);
@@ -98,7 +102,6 @@ int main(int argc, char *argv[]) {
   char service[NI_MAXSERV];
 
   int pid;
-  int p;
 
   // Parallel server
   while (1) {
@@ -149,6 +152,13 @@ int main(int argc, char *argv[]) {
         auto ldapRequest = createLDAPRequest(buffer);
         ldapRequest->parse();
         ldapRequest->respond(clientSockfd, inputFile);
+
+        // If ldaprequest is nullptr, it is not supported, close connection
+        if (ldapRequest == nullptr) {
+          std::cout << "Unsupported request received" << std::endl;
+          close(clientSockfd);
+          break;
+        }
 
         // Check if request is instance of Unbind
         if (dynamic_cast<Unbind *>(ldapRequest.get())) {

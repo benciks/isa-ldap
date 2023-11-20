@@ -1,3 +1,10 @@
+/**
+ * @file search.cpp
+ * @brief This file contains the csv manipulation and search filter functions
+ * implementation
+ * @author Simon Bencik <xbenci01>
+ */
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <sstream>
