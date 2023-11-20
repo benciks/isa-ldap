@@ -203,10 +203,16 @@ void Search::respond(int fd, std::string inputFile) {
   std::cout << "Search response ->" << std::endl;
 
   auto entries = readCSV(inputFile);
+  size_t count = 0;
+
   // Apply filter to each entry
   for (const auto &entry : entries) {
+    if (sizeLimit != 0 && count >= sizeLimit) {
+      break;
+    }
     if (filterEntry(filter, entry)) {
       sendSearchResEntry(entry, fd, messageID);
+      count++;
     }
   }
 

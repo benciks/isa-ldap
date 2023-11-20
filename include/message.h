@@ -52,7 +52,7 @@ private:
   std::vector<unsigned char> baseObject;
   unsigned char scope;
   unsigned char derefAliases;
-  unsigned char sizeLimit;
+  unsigned char sizeLimit = 0;
   unsigned char timeLimit;
   unsigned char typesOnly;
   Filter filter;
